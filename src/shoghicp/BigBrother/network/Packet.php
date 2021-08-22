@@ -38,7 +38,7 @@ use shoghicp\BigBrother\utils\ComputerItem;
 use shoghicp\BigBrother\utils\ConvertUtils;
 use stdClass;
 
-abstract class Packet extends stdClass{
+abstract class Packet extends stdClass {
 
 	/** @var string */
 	protected $buffer;
@@ -95,8 +95,8 @@ abstract class Packet extends stdClass{
 		}else{
 
 			$id = $this->getVarInt();
-			$count = $this->getByte();//count or damage
-			$nbt = $this->get(true);//getNbt
+			$count = $this->getByte(); //count or damage
+			$nbt = $this->get(true); //getNbt
 
 			var_dump($id.",".$count);
 
@@ -123,17 +123,17 @@ abstract class Packet extends stdClass{
 		}
 		ConvertUtils::convertItemData(true, $item);
 
-		/*$this->putBool(!$item->isNull());
-		if(!$item->isNull()){
-			//$this->putVarInt();
-			$this->putByte($item->getCount());
-			if($item->hasCompoundTag()){
-				$itemNBT = clone $item->getNamedTag();
-				$this->put(ConvertUtils::convertNBTDataFromPEtoPC($itemNBT));
-			}else{
-				$this->put("\x00");//TAG_End
-			}
-		}*/
+//		$this->putBool(!$item->isNull());
+//		if(!$item->isNull()){
+//			//$this->putVarInt();
+//			$this->putByte($item->getCount());
+//			if($item->hasCompoundTag()){
+//				$itemNBT = clone $item->getNamedTag();
+//				$this->put(ConvertUtils::convertNBTDataFromPEtoPC($itemNBT));
+//			}else{
+//				$this->put("\x00");//TAG_End
+//			}
+//		}
 		$this->putBool(false);
 	}
 
@@ -267,5 +267,4 @@ abstract class Packet extends stdClass{
 		$this->putLong(($parts[0] << 32) | $parts[1]);
 		$this->putLong(($parts[1] << 32) | $parts[2]);
 	}
-
 }

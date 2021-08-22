@@ -46,5 +46,5 @@ class UpdateViewPositionPacket extends OutboundPacket{
 		$this->putVarInt($this->chunkX);
 		$this->putVarInt($this->chunkZ);
 	}
-
+	
 }

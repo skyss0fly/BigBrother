@@ -180,19 +180,18 @@ class ProtocolInterface implements SourceInterface{
 	protected function sendPacket(int $target, Packet $packet){
 		if(DEBUG > 4){
 			if($packet->pid() !== OutboundPacket::KEEP_ALIVE_PACKET){
-				try{
-					echo "[Send][Interface] 0x".bin2hex(chr($packet->pid())).": ".strlen($packet->write())."\n";
-					echo (new ReflectionClass($packet))->getName()."\n";
-				}catch(ReflectionException $e){
-				}
+				echo "[Send][Interface] 0x".bin2hex(chr($packet->pid())).": ".strlen($packet->write())."\n";
+				echo (new ReflectionClass($packet))->getName()."\n";
 			}
 		}
 
-		try{
+		try {
 			$data = chr(ServerManager::PACKET_SEND_PACKET) . Binary::writeInt($target) . $packet->write();
-		} catch(\Throwable $t) {
-
+		} catch (\Throwable $t) {
+			echo $t->getFile() . "\n";
+			echo $t->getMessage() . "\n";
 		}
+
 		$this->thread->pushMainToThreadPacket($data);
 	}
 
