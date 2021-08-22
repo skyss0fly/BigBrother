@@ -43,6 +43,7 @@ use pocketmine\event\player\PlayerRespawnEvent;
 use pocketmine\event\block\BlockPlaceEvent;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\Listener;
+use pocketmine\utils\Config;
 use pocketmine\utils\TextFormat;
 
 use shoghicp\BigBrother\network\protocol\Play\Server\UpdateViewPositionPacket;
@@ -102,6 +103,19 @@ class BigBrother extends PluginBase implements Listener{
 				ConvertUtils::init();
 
 				$this->saveDefaultConfig();
+				if(($version = $this->getConfig()->get("version", null)) == null || $version != file_get_contents($this->getFile() . "/resources/version")) {
+					$this->getLogger()->info("Old config detected. Updating config...");
+					copy($this->getDataFolder() . "config.yml", $this->getDataFolder() . "outdated_config.yml");
+					file_put_contents($this->getDataFolder() . "config.yml", file_get_contents($this->getFile() . "/resources/version"));
+
+					$oldConfig = new Config($this->getDataFolder() . "outdated_config.yml");
+					$newConfig = $this->getConfig();
+					foreach($oldConfig->getAll() as $key => $value) {
+						$newConfig->set($key, $value);
+					}
+					$newConfig->save();
+				}
+
 				$this->saveResource("blockStateMapping.json", true);
 				$this->saveResource("color_index.dat", true);
 				$this->saveResource("dimensionCodec.dat", true);
@@ -116,26 +130,26 @@ class BigBrother extends PluginBase implements Listener{
 				$this->dimensionCodec = file_get_contents($this->getDataFolder()."dimensionCodec.dat");
 				$this->dimension = file_get_contents($this->getDataFolder()."dimension.dat");
 
-				$this->getLogger()->info("OS: ".php_uname());
-				$this->getLogger()->info("PHP version: ".PHP_VERSION);
+				$this->getLogger()->debug("OS: ".php_uname());
+				$this->getLogger()->debug("PHP version: ".PHP_VERSION);
 
-				$this->getLogger()->info("PMMP Server version: ".$this->getServer()->getVersion());
-				$this->getLogger()->info("PMMP API version: ".$this->getServer()->getApiVersion());
+				$this->getLogger()->debug("PMMP Server version: ".$this->getServer()->getVersion());
+				$this->getLogger()->debug("PMMP API version: ".$this->getServer()->getApiVersion());
 
 				if(!$this->isPhar() and is_dir($this->getFile().".git")){
 					$cwd = getcwd();
 					chdir($this->getFile());
 					@exec("git describe --tags --always --dirty", $revision, $value);
 					if($value == 0){
-						$this->getLogger()->info("BigBrother revision: ".$revision[0]);
+						$this->getLogger()->debug("BigBrother revision: ".$revision[0]);
 					}
 					chdir($cwd);
 				}elseif(($resource = $this->getResource("revision")) and ($revision = stream_get_contents($resource))){
-					$this->getLogger()->info("BigBrother.phar; revision: ".$revision);
+					$this->getLogger()->debug("BigBrother.phar; revision: ".$revision);
 				}
 
 				if(!$this->setupComposer()){
-					$this->getLogger()->critical("Composer autoloader not found");
+					$this->getLogger()->critical("Composer dependencies & autoloader not found. Run 'composer install' before building.");
 					$this->getServer()->getPluginManager()->disablePlugin($this);
 					return;
 				}
@@ -143,7 +157,7 @@ class BigBrother extends PluginBase implements Listener{
 				$aes = new AES(AES::MODE_CFB8);
 				switch($aes->getEngine()){
 					case AES::ENGINE_OPENSSL:
-						$this->getLogger()->info("Use openssl as AES encryption engine.");
+						$this->getLogger()->debug("Use openssl as AES encryption engine.");
 					break;
 					case AES::ENGINE_MCRYPT:
 						$this->getLogger()->warning("Use obsolete mcrypt for AES encryption. Try to install openssl extension instead!!");
@@ -176,19 +190,19 @@ class BigBrother extends PluginBase implements Listener{
 				}
 
 				if(!$this->getConfig()->exists("motd")){
-					$this->getLogger()->warning("No motd has been set. The server description will be empty.");
+					$this->getLogger()->critical("No MOTD has been set. The server description will be empty.");
 					$this->getServer()->getPluginManager()->disablePlugin($this);
 					return;
 				}
 
-				$this->onlineMode = (bool) ($this->getConfig()->get("online-mode") | $this->getConfig()->get("xbox-auth"));//
+				$this->onlineMode = (bool) ($this->getConfig()->get("online-mode") | $this->getConfig()->get("xbox-auth"));
 				if($this->onlineMode){
 					$this->getLogger()->info("Server is being started in the background");
-					$this->getLogger()->info("Generating keypair");
+					$this->getLogger()->debug("Generating keypair");
 					$this->rsa->setPrivateKeyFormat(RSA::PRIVATE_FORMAT_PKCS1);
 					$this->rsa->setPublicKeyFormat(RSA::PUBLIC_FORMAT_PKCS8);
 					$this->rsa->setEncryptionMode(RSA::ENCRYPTION_PKCS1);
-					$keys = $this->rsa->createKey();//1024 bits
+					$keys = $this->rsa->createKey(); # 1024-bit key.
 					$this->privateKey = $keys["privatekey"];
 					$this->publicKey = $keys["publickey"];
 					$this->rsa->loadKey($this->privateKey);
@@ -204,7 +218,7 @@ class BigBrother extends PluginBase implements Listener{
 				$this->interface = new ProtocolInterface($this, $this->getServer(), $this->translator, (int) $this->getConfig()->get("network-compression-threshold"));
 				$this->getServer()->getNetwork()->registerInterface($this->interface);
 			}else{
-				$this->getLogger()->critical("Couldn't find a protocol translator for #".Info::CURRENT_PROTOCOL .", disabling plugin");
+				$this->getLogger()->critical("Couldn't find a protocol translator for #" . Info::CURRENT_PROTOCOL .". Disabling plugin.");
 				$this->getServer()->getPluginManager()->disablePlugin($this);
 			}
 		}
@@ -241,8 +255,15 @@ class BigBrother extends PluginBase implements Listener{
 	/**
 	 * @return string
 	 */
-	public function getDesktopPrefix() {
+	public function getDesktopPrefix() :string{
 		return $this->desktopPrefix;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getAdvancementData() :array{
+		return (array) $this->getConfig()->get("advancement");
 	}
 
 	/**
@@ -382,11 +403,11 @@ class BigBrother extends PluginBase implements Listener{
 		if(!$this->isPhar() and !is_file($autoload)){
 			$this->getLogger()->info("Trying to setup composer...");
 
-			//Fix ssl operation failed
-			//https://stackoverflow.com/questions/26148701/file-get-contents-ssl-operation-failed-with-code-1-failed-to-enable-crypto
+			// Fix ssl operation failed
+			// https://stackoverflow.com/questions/26148701/file-get-contents-ssl-operation-failed-with-code-1-failed-to-enable-crypto
 
-			$arrContextOptions=array(
-				"ssl"=>array(
+			$arrContextOptions = array(
+				"ssl" => array(
 					"verify_peer"=>false,
 					"verify_peer_name"=>false,
 				),
@@ -474,7 +495,7 @@ class BigBrother extends PluginBase implements Listener{
 				}
 			break;
 			case TextPacket::TYPE_POPUP:
-			case TextPacket::TYPE_TIP://Just to be sure
+			case TextPacket::TYPE_TIP: //Just to be sure
 				if(isset($result["text"])){
 					$result["text"] = str_replace("\n", "", $message);
 				}
@@ -492,7 +513,7 @@ class BigBrother extends PluginBase implements Listener{
 		}
 
 		$result = json_encode($result, JSON_UNESCAPED_SLASHES);
-		return $result;
+		return json_encode($result, JSON_UNESCAPED_SLASHES);
 	}
 
 	/**

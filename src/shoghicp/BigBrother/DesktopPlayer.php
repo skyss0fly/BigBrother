@@ -302,54 +302,27 @@ class DesktopPlayer extends Player{
 	 * @param bool $first
 	 */
 	public function sendAdvancements(bool $first = false) : void{
+		$advancement = $this->plugin->getAdvancementData();
 		$pk = new AdvancementsPacket();
-		$pk->advancements = [
-			[
-				"pocketmine:advancements/root",
-				[
-					false
-				],
-				[
-					true,
-					BigBrother::toJSON("Welcome to PocketMine-MP Server!"),
-					BigBrother::toJSON("Join to PocketMine-MP Server with Minecraft"),
-					Item::get(Item::GRASS),
-					0,
-					[
-						1,
-						"minecraft:textures/block/stone.png"
-					],
-					0,
-					0
-				],
-				[
-					["hasjoined"],
-				],
-				[
-					[
-						"hasjoined"
-					]
+		$pk->advancements = [[
+			"pocketmine:advancements/root", [ false ], [
+				true,
+				BigBrother::toJSON($advancement["messages"][1]),
+				BigBrother::toJSON($advancement["messages"][2]),
+				$advancement["itemId"], 0, [1,
+					$advancement["texture"]
+				], 0, 0
+			], [["hasjoined"]], [["hasjoined"]]]
+		];
+		$pk->progress = [["pocketmine:advancements/root", [
+					["hasjoined", [ true, time() ]]
 				]
 			]
 		];
 		$pk->identifiers = [];
-		$pk->progress = [
-			[
-				"pocketmine:advancements/root",
-				[
-					[
-						"hasjoined",
-						[
-							true,
-							time()
-						]
-					]
-				]
-			]
-		];
 		$this->putRawPacket($pk);
 
-		if($first){
+		if($first) {
 			$pk = new SelectAdvancementTabPacket();
 			$pk->hasId = true;
 			$pk->identifier = "pocketmine:advancements/root";
