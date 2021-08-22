@@ -33,6 +33,7 @@ use Exception;
 use ReflectionClass;
 use ReflectionException;
 use pocketmine\event\player\PlayerCreationEvent;
+use shoghicp\BigBrother\events\DesktopPlayerCreationEvent;
 use SplObjectStorage;
 use const pocketmine\DEBUG;
 use pocketmine\network\mcpe\protocol\DataPacket;
@@ -434,7 +435,10 @@ class ProtocolInterface implements SourceInterface{
 
 				$identifier = "$id:$address:$port";
 
-				$player = new DesktopPlayer($this, $identifier, $address, $port, $this->plugin);
+				$creationEvent = new DesktopPlayerCreationEvent($this, DesktopPlayer::class, DesktopPlayer::class, $address, $port, $identifier);
+				$creationEvent->call(); $class = $creationEvent->getPlayerClass();
+
+				$player = new $class($this, $identifier, $address, $port, $this->plugin);
 				$this->sessions->attach($player, $id);
 				$this->sessionsPlayers[$id] = $player;
 				$this->plugin->getServer()->addPlayer($player);
